@@ -106,18 +106,21 @@ async def get_new_access_token(refresh_token: str = Header(default=None)):
         print(e)
         return HTTPException(status_code=500, detail="a")
     user_sub = literal_eval(user_info['sub'])
-    print(user_sub)
     email = user_sub['email']
-    created_at = user_sub['created_at']
-    print(user_sub['email'])
-    print(created_at)
+    created_at = datetime.strptime(user_sub['created_at'], '%Y-%m-%d %H:%M:%S.%f')
+    username = user_sub['username']
+    now = datetime.now()
+
+    user_info = {"email": email, "username": username,
+                 "created_at": str(datetime.now())}
 
     if email is None:
         return HTTPException(status_code=401, detail="not unauthorized")
 
-    # if created_at
-
-    return ""
+    if created_at > now:
+        return HTTPException(status_code=401, detail="not unauthorized")
+    else:
+        return {"access_token": create_access_token(user_info)}
 
 
 @router.get("/users")
