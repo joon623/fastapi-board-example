@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Form, HTTPException, Header
-from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
 from passlib.context import CryptContext
 from fastapi.responses import JSONResponse
@@ -9,8 +8,7 @@ from ast import literal_eval
 
 from app.config.connection import database
 from app.models.user import users
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+from app.util.auth import SECRET_KEY, ALGORITHM
 
 router = APIRouter(
     prefix="/users",
@@ -21,8 +19,7 @@ pwd_context = CryptContext(schemes=['bcrypt'], deprecated="auto")
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes
 REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
-SECRET_KEY = "b5e703b413ad7decf8ae3ffa7f60a22df17e70bc147447810a0c195c2809996c"  # do not user this
-ALGORITHM = "HS256"
+
 
 
 def verify_password(plain_password: str, hashed_password: str):

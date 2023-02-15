@@ -1,7 +1,9 @@
-from fastapi import FastAPI
+
+from fastapi import FastAPI, Depends, Cookie
+from starlette.requests import Request
 
 from app.config.connection import database, engine, metadata
-from app.routes import user
+from app.routes import user, board
 
 
 def create_app() -> FastAPI:
@@ -13,6 +15,7 @@ def create_app() -> FastAPI:
 app = create_app()
 
 app.include_router(user.router)
+app.include_router(board.router)
 
 
 @app.on_event("startup")
