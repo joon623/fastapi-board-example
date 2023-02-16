@@ -1,6 +1,4 @@
-
-from fastapi import FastAPI, Depends, Cookie
-from starlette.requests import Request
+from fastapi import FastAPI
 
 from app.config.connection import database, engine, metadata
 from app.routes import user, board

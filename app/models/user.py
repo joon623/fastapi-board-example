@@ -10,6 +10,5 @@ users = Table(
     Column("email", String(50), unique=True, index=True,  nullable=False),
     Column("username", String(50), unique=True,  nullable=False),
     Column("password", LONGTEXT),
-    Column("created_at", DateTime(timezone=True)),
-    Column("refresh_token", LONGTEXT)
+    Column("created_at", DateTime(timezone=True))
 )

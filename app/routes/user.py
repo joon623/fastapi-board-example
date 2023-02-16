@@ -1,74 +1,35 @@
-from datetime import datetime, timedelta
-
-from fastapi import APIRouter, Form, HTTPException, Header
-from jose import jwt
-from passlib.context import CryptContext
-from fastapi.responses import JSONResponse
 from ast import literal_eval
+from datetime import datetime
+
+from fastapi import APIRouter, Form, HTTPException, Header, Depends
+from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials
+from jose import jwt
 
 from app.config.connection import database
 from app.models.user import users
-from app.util.auth import SECRET_KEY, ALGORITHM
+from app.util.auth import SECRET_KEY, ALGORITHM, verify_password, create_access_token, create_refresh_token, \
+    get_password_hash, auth_scheme, get_user_info_in_token
 
 router = APIRouter(
     prefix="/users",
     tags=["users"]
 )
 
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated="auto")
-
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes
-REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
-
-
-
-def verify_password(plain_password: str, hashed_password: str):
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password: str):
-    return pwd_context.hash(password)
-
-
-async def get_user(email):
-    query = users.select().where(email == users.columns.email)
-    return await database.fetch_one(query)
-
-
-def create_access_token(subject: dict, expires_delta: int = None) -> str:
-    if expires_delta is not None:
-        expires_delta = datetime.utcnow() + expires_delta
-    else:
-        expires_delta = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-
-    to_encode = {"exp": expires_delta, "sub": str(subject)}
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, ALGORITHM)
-    return encoded_jwt
-
-
-def create_refresh_token(subject: dict, expires_delta: int = None) -> str:
-    if expires_delta is not None:
-        expires_delta = datetime.utcnow() + expires_delta
-    else:
-        expires_delta = datetime.utcnow() + timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
-
-    to_encode = {"exp": expires_delta, "sub": str(subject)}
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, ALGORITHM)
-    return encoded_jwt
-
 
 @router.post("/login/")
 async def login(email: str = Form(), password: str = Form()):
     query = users.select().where(users.columns.email == email)
     user_info = await database.fetch_one(query)
+    user_info_dict = dict(user_info)
     if user_info is None:
         raise HTTPException(status_code=404, detail="email is not found")
 
     if not verify_password(password, user_info.password):
         raise HTTPException(status_code=401, detail="password is wrong")
 
-    del user_info[password]
-    user_info['created_at'] = str(datetime.now())
+    del user_info_dict["password"]
+    user_info_dict['created_at'] = str(datetime.now())
 
     access_token = create_access_token(user_info)
     refresh_token = create_refresh_token(user_info)
@@ -84,32 +45,38 @@ async def sign_up(email: str = Form(), password: str = Form(), username: str = F
     if user_data:
         raise HTTPException(status_code=409, detail="user is already exists")
 
+    username_query = users.select().where(users.columns.username == username)
+    user_data = await database.fetch_one(username_query)
+
+    if user_data:
+        raise HTTPException(status_code=409, detail="username is already exists")
+
     hashed_password = get_password_hash(password)
-    user_info = {"email": email, "username": username,
-                 "created_at": str(datetime.now())}
+    user_info = get_user_info_in_token(email=email, username=username)
+
     access_token = create_access_token(user_info)
     refresh_token = create_refresh_token(user_info)
     insert_query = users.insert().values(email=email, password=hashed_password, username=username,
-                                         created_at=datetime.now(), refresh_token=refresh_token)
+                                         created_at=datetime.now())
     await database.execute(insert_query)
     return JSONResponse({"access_token": access_token, "refresh_token": refresh_token}, status_code=201)
 
 
 @router.post("/refresh")
-async def get_new_access_token(refresh_token: str = Header(default=None)):
+async def get_new_access_token(refresh_token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
     try:
-        user_info = jwt.decode(refresh_token, SECRET_KEY, ALGORITHM)
+        user_info = jwt.decode(refresh_token.credentials, SECRET_KEY, ALGORITHM)
     except Exception as e:
         print(e)
         return HTTPException(status_code=500, detail="a")
+
     user_sub = literal_eval(user_info['sub'])
     email = user_sub['email']
     created_at = datetime.strptime(user_sub['created_at'], '%Y-%m-%d %H:%M:%S.%f')
     username = user_sub['username']
     now = datetime.now()
 
-    user_info = {"email": email, "username": username,
-                 "created_at": str(datetime.now())}
+    user_info = get_user_info_in_token(email=email, username=username)
 
     if email is None:
         return HTTPException(status_code=401, detail="not unauthorized")
@@ -118,8 +85,3 @@ async def get_new_access_token(refresh_token: str = Header(default=None)):
         return HTTPException(status_code=401, detail="not unauthorized")
     else:
         return {"access_token": create_access_token(user_info)}
-
-
-@router.get("/users")
-async def get_all_users():
-    return await database.fetch_all(users.select())
