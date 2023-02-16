@@ -11,3 +11,8 @@ class Board(BaseModel):
     email: Optional[str]
     title: str
     body: str
+
+
+class BoardInput(BaseModel):
+    title: str
+    body: str

@@ -28,12 +28,11 @@ REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 
 def verify_token(token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
-    print(token)
     if token is None:
         raise EXCEPTION_NOT_AUTHORIZATION
 
     try:
-        user_info = jwt.decode(token, SECRET_KEY, ALGORITHM)
+        user_info = jwt.decode(token.credentials, SECRET_KEY, ALGORITHM)
     except Exception as e:
         print(e)
         return HTTPException(status_code=400, detail="token is not valid")
@@ -52,11 +51,12 @@ def get_user_info(token: HTTPAuthorizationCredentials = Depends(auth_scheme)) ->
     try:
         access_token = token.credentials
         user_info = jwt.decode(access_token, SECRET_KEY, ALGORITHM)
+        user_sub = literal_eval(user_info['sub'])
     except Exception as e:
-        print('get_user_info', e)
+        print(e)
         return None
 
-    return user_info
+    return user_sub
 
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated="auto")
@@ -70,7 +70,7 @@ def get_password_hash(password: str):
     return pwd_context.hash(password)
 
 
-def get_user_info_in_token(email: str, username: str):
+def get_token_info(email: str, username: str):
     return {"email": email, "username": username,
             "created_at": str(datetime.now())}
 
