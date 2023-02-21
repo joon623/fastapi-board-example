@@ -3,8 +3,7 @@ import datetime
 from fastapi import APIRouter, Depends
 from starlette.responses import JSONResponse
 
-from app.config.connection import database
-from app.models.boards import boards
+from app.crud.board import get_board_item_by_email, create_board_item, delete_board_item_by_id, update_board_item
 from app.schema.board import BoardInput
 from app.util.auth import verify_token, get_user_info
 from app.util.board import delete_board_by_id, update_board_by_id
@@ -18,28 +17,24 @@ router = APIRouter(
 
 @router.get('/')
 async def get_board(user_info=Depends(get_user_info)):
-    query = boards.select().where(boards.c.email == user_info['email'])
-    return await database.fetch_all(query)
+    return await get_board_item_by_email(user_info['email'])
 
 
 @router.post("/")
 async def create_board(content: BoardInput, user_info=Depends(get_user_info)):
     if user_info is not None:
-        insert_query = boards.insert().values(created_at=datetime.datetime.now(), username=user_info['username'],
-                                              email=user_info['email'], title=content.title, body=content.body)
-        await database.execute(insert_query)
+        await create_board_item(datetime=datetime.datetime.now(), username=user_info['username'],
+                                email=user_info['email'], title=content.title, body=content.body)
         return JSONResponse(status_code=201, content="ok")
 
 
 @router.delete("/")
 async def delete_board(id: int = Depends(delete_board_by_id)):
-    query = boards.delete().where(boards.c.id == id)
-    await database.execute(query)
+    await delete_board_item_by_id(id)
     return JSONResponse(status_code=200, content="ok")
 
 
 @router.patch("/")
 async def update_board(contents=Depends(update_board_by_id)):
-    query = boards.update().where(boards.c.id == contents["id"]).values(title=contents['title'], body=contents['body'])
-    await database.execute(query)
+    await update_board_item(id=contents["id"], title=contents["title"], body=contents['body'])
     return JSONResponse(status_code=200, content="ok")
