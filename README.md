@@ -7,7 +7,18 @@ board.
 This project provides an example implementation of a bulletin board with CRUD functionalities using FastAPI and
 SQLAlchemy to manage the database.
 
-# Installation and Running
+# Installation and Running with Docker
+1. Clone this repository.
+```shell
+git clone https://github.com/joon623/fastapi-board-example.git
+```
+
+2. implement docker compose 
+```shell
+docker compose up --build
+```
+
+# Installation and Running 
 
 1. Clone this repository.
 
@@ -20,7 +31,7 @@ git clone https://github.com/joon623/fastapi-board-example.git
 
 ```shell
 cd fastapi-board-example
-python -m venv venv
+python3 -m venv .venv
 ```
 
 3. Activate the virtual environment.
@@ -28,13 +39,13 @@ python -m venv venv
 - Windows:
 
 ```shell
-venv\Scripts\activate
+.venv\Scripts\activate
 ```
 
 - macOS/Linux:
 
 ```shell
-source venv/bin/activate
+source .venv/bin/activate
 ```
 
 4. Install the necessary packages.
