@@ -41,19 +41,12 @@ source venv/bin/activate
 ```shell
 pip install -r requirements.txt
 ```
-
-5. Initialize the database.
-
+5. Run the server.
 ```shell
-python initialize_db.py
+uvicorn app.main:app --reload
 ```
 
-6. Run the server.
-```shell
-uvicorn main:app --reload
-```
-
-7. Access the API documentation using Swagger UI by navigating to
+6. Access the API documentation using Swagger UI by navigating to
 http://localhost:8000/docs in a web browser.
 
 ## Technologies Used
